@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 // Import các hàm mã hóa từ file encryption.js và giải mã từ decode.js
 import { encrypt3DES, bitsToHex } from './utils/encryption'
 import { decrypt3DES } from './utils/decode'
+import CryptoJS from 'crypto-js'
 import './App.css'
 
 // Cách 1: Đọc từng byte một (ASCII) - Đây là lý do gây ra lỗi h··m nay
@@ -52,6 +53,11 @@ function App() {
   const [decryptSteps, setDecryptSteps] = useState([])
   const [isDecrypting, setIsDecrypting] = useState(false)
   const [decryptTime, setDecryptTime] = useState(0)
+
+  // State quản lý AES
+  const [aesResult, setAesResult] = useState('')
+  const [aesTime, setAesTime] = useState(0)
+  const [isAesEncrypting, setIsAesEncrypting] = useState(false)
 
   // State cuộn tự động
   const encryptStepsEndRef = useRef(null)
@@ -130,8 +136,32 @@ function App() {
         }
         setDecryptTime(Math.round(performance.now() - startTime))
       } catch (e) { alert("Lỗi Giải mã!"); console.error(e); }
-      finally { setIsDecrypting(false); }
     }
+  }
+
+  // Hàm xử lý AES riêng biệt để so sánh tốc độ
+  const handleAESProcess = () => {
+    setIsAesEncrypting(true)
+    setAesResult('')
+    setAesTime(0)
+    
+    // Sử dụng setTimeout để UI không bị treo và có thể hiển thị trạng thái 'Loading'
+    setTimeout(() => {
+      const startTime = performance.now()
+      try {
+        // Mã hóa AES bằng thư viện crypto-js
+        const ciphertext = CryptoJS.AES.encrypt(inputText, key).toString()
+        const endTime = performance.now()
+        
+        setAesResult(ciphertext)
+        setAesTime(endTime - startTime)
+      } catch (e) {
+        alert("Lỗi Mã hóa AES!")
+        console.error(e)
+      } finally {
+        setIsAesEncrypting(false)
+      }
+    }, 50)
   }
 
   const renderStep = (step, index, showExplainer = false) => {
@@ -433,6 +463,95 @@ function App() {
                   )}
                   <div ref={decryptStepsEndRef} />
                </div>
+            </div>
+          </section>
+
+          {/* III. AES (DÀNH CHO SO SÁNH HIỆU NĂNG) */}
+          <section className="space-y-8 animate-in slide-in-from-bottom-10 duration-1000">
+            <div className="bg-slate-900 p-10 rounded-[3.5rem] shadow-2xl border-4 border-indigo-500/30 space-y-10 group overflow-hidden relative">
+              {/* Background Glow */}
+              <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full"></div>
+              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-sky-600/10 blur-[100px] rounded-full"></div>
+
+              <div className="flex items-center justify-between border-b-2 border-slate-800 pb-8 relative z-10">
+                <div className="flex items-center gap-5">
+                   <div className="bg-gradient-to-br from-indigo-500 to-sky-500 text-white w-14 h-14 rounded-2xl flex items-center justify-center font-black text-2xl shadow-xl shadow-indigo-500/20 ring-4 ring-slate-800">
+                     AES
+                   </div>
+                   <div>
+                     <h2 className="text-3xl font-black text-white uppercase tracking-tight">Advanced Encryption Standard</h2>
+                     <p className="text-indigo-400 text-xs font-black uppercase tracking-[0.3em] mt-1">Sử dụng thư viện CryptoJS (Phòng thí nghiệm)</p>
+                   </div>
+                </div>
+                {aesTime > 0 && (
+                  <div className="flex flex-col items-end">
+                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-1">Thời gian thực thi</span>
+                    <div className="bg-indigo-500 text-white px-6 py-2 rounded-2xl font-black text-lg shadow-lg border-2 border-indigo-400 animate-pulse">
+                      {aesTime.toFixed(4)} <span className="text-xs opacity-70">ms</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 relative z-10">
+                <div className="lg:col-span-3 space-y-4">
+                   <div className="flex justify-between items-center px-4">
+                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Dữ liệu đầu vào (Input Source)</label>
+                     <span className="text-[10px] font-black text-indigo-500 bg-indigo-500/10 px-3 py-1 rounded-full">{inputText.length} ký tự</span>
+                   </div>
+                   <div className="bg-slate-800/50 p-6 rounded-[2rem] border-2 border-slate-700 font-bold text-slate-300 italic min-h-[100px] flex items-center">
+                     "{inputText || 'Chưa có dữ liệu...'}"
+                   </div>
+                </div>
+                
+                <div className="flex flex-col justify-end pb-1">
+                   <button 
+                    onClick={handleAESProcess}
+                    disabled={isAesEncrypting || !inputText}
+                    className="w-full h-full min-h-[80px] rounded-[2rem] font-black text-xl text-white bg-gradient-to-r from-indigo-600 to-sky-600 hover:from-white hover:to-white hover:text-indigo-900 transition-all shadow-2xl shadow-indigo-500/20 hover:-translate-y-2 active:scale-95 uppercase tracking-tighter disabled:opacity-30 disabled:translate-y-0"
+                   >
+                    {isAesEncrypting ? (
+                      <span className="flex items-center justify-center gap-3">
+                         <svg className="animate-spin h-6 w-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                         </svg>
+                         Xử lý...
+                      </span>
+                    ) : '⚡ MÃ HÓA AES'}
+                   </button>
+                </div>
+              </div>
+
+              {aesResult && (
+                <div className="bg-indigo-900/20 p-8 rounded-[3rem] border-2 border-indigo-500/20 animate-in zoom-in slide-in-from-top-4 duration-500 backdrop-blur-sm">
+                   <div className="flex items-center gap-3 mb-6">
+                      <div className="w-2 h-2 rounded-full bg-sky-400"></div>
+                      <p className="text-[10px] text-sky-400 font-black uppercase tracking-[0.4em]">KẾT QUẢ MÃ HÓA AES (Base64 URL Safe)</p>
+                   </div>
+                   <div className="relative group/result">
+                      <code className="text-xl text-indigo-100 font-mono break-all leading-relaxed block bg-slate-950/80 p-8 rounded-3xl border-2 border-slate-800 group-hover/result:border-sky-500/50 transition-colors shadow-2xl">
+                        {aesResult}
+                      </code>
+                      <button 
+                        onClick={() => navigator.clipboard.writeText(aesResult)}
+                        className="absolute top-4 right-4 bg-slate-800 text-slate-400 px-4 py-2 rounded-xl text-[10px] font-black uppercase hover:bg-sky-500 hover:text-white transition-all border border-slate-700"
+                      >
+                        Sao chép
+                      </button>
+                   </div>
+                   <div className="mt-8 flex flex-wrap gap-4">
+                      <div className="bg-slate-950/50 px-5 py-3 rounded-2xl border border-slate-800">
+                         <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Thuật toán</span>
+                         <span className="text-sm font-black text-white">AES-256 (CBC)</span>
+                      </div>
+                      <div className="bg-slate-950/50 px-5 py-3 rounded-2xl border border-slate-800">
+                         <span className="text-[9px] font-black text-slate-500 uppercase block mb-1">Chế độ</span>
+                         <span className="text-sm font-black text-white">PKCS7 Padding</span>
+                      </div>
+                   </div>
+                </div>
+              )}
             </div>
           </section>
         </main>
