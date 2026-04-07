@@ -60,20 +60,20 @@ function App() {
   const [isAesEncrypting, setIsAesEncrypting] = useState(false)
 
   // State cuộn tự động
-  const encryptStepsEndRef = useRef(null)
-  const decryptStepsEndRef = useRef(null)
+  // const encryptStepsEndRef = useRef(null)
+  // const decryptStepsEndRef = useRef(null)
 
-  const scrollToBottom = (ref) => {
-    ref.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  // const scrollToBottom = (ref) => {
+  //   ref.current?.scrollIntoView({ behavior: 'smooth' })
+  // }
 
-  useEffect(() => {
-    scrollToBottom(encryptStepsEndRef)
-  }, [encryptSteps])
+  // useEffect(() => {
+  //   // scrollToBottom(encryptStepsEndRef)
+  // }, [encryptSteps])
 
-  useEffect(() => {
-    scrollToBottom(decryptStepsEndRef)
-  }, [decryptSteps])
+  // useEffect(() => {
+  //   // scrollToBottom(decryptStepsEndRef)
+  // }, [decryptSteps])
 
   // Hàm xử lý chung cho cả Mã hóa và Giải mã
   const handleProcess = async (mode) => {
@@ -150,6 +150,16 @@ function App() {
       const startTime = performance.now()
       try {
         // Mã hóa AES bằng thư viện crypto-js
+        const parsedKey = CryptoJS.enc.Hex.parse(key);
+// 2. Mã hóa với cấu hình tường minh: Mode ECB và Padding PKCS7
+const encrypted = CryptoJS.TripleDES.encrypt(inputText, parsedKey, {
+  mode: CryptoJS.mode.ECB,
+  padding: CryptoJS.pad.Pkcs7
+});
+// 3. Lấy kết quả dưới dạng Hexadecimal
+const test = encrypted.ciphertext.toString(CryptoJS.enc.Hex);
+console.log("Kết quả từ thư viện (Hex):", test);
+
         const ciphertext = CryptoJS.AES.encrypt(inputText, key).toString()
         const endTime = performance.now()
         
@@ -161,7 +171,7 @@ function App() {
       } finally {
         setIsAesEncrypting(false)
       }
-    }, 50)
+    }, 0)
   }
 
   const renderStep = (step, index, showExplainer = false) => {
@@ -288,7 +298,7 @@ function App() {
         <main className="space-y-14 pb-24">
           
           {/* Cấu hình khóa chung (Sticky) */}
-          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-200 sticky top-6 z-50 ring-12 ring-slate-50/70 backdrop-blur-xl bg-white/95">
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-slate-200  ring-12 ring-slate-50/70 backdrop-blur-xl bg-white/95">
              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
                 <label className="text-sm font-black text-indigo-600 uppercase tracking-[0.2em] flex items-center gap-3">
                   <span className="w-3 h-3 rounded-full bg-indigo-500 animate-ping"></span>
@@ -383,7 +393,7 @@ function App() {
                       )
                     })
                   )}
-                  <div ref={encryptStepsEndRef} />
+                  {/* <div ref={encryptStepsEndRef} /> */}
                </div>
             </div>
           </section>
@@ -411,10 +421,10 @@ function App() {
                    <label className="text-xs font-black text-slate-400 uppercase tracking-[0.3em] ml-2">Khôi phục hệ thống</label>
                    <button 
                     onClick={() => handleProcess('decrypt')}
-                    disabled={isDecrypting || !hexInput}
+                    // disabled={isDecrypting || !hexInput}
                     className="flex-1 rounded-[2rem] font-black text-xl text-white bg-emerald-600 hover:bg-slate-900 transition-all shadow-2xl shadow-emerald-300 hover:-translate-y-2 active:scale-95 uppercase tracking-tighter disabled:bg-slate-200 disabled:shadow-none"
                   >
-                    {isDecrypting ? '🔄 Đang giải mã...' : '🔓 GIẢI MÃ VĂN BẢN'}
+                     GIẢI MÃ VĂN BẢN
                   </button>
                 </div>
               </div>
@@ -461,7 +471,7 @@ function App() {
                       )
                     })
                   )}
-                  <div ref={decryptStepsEndRef} />
+                  {/* <div ref={decryptStepsEndRef} /> */}
                </div>
             </div>
           </section>
