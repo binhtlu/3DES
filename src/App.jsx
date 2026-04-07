@@ -161,18 +161,26 @@ function App() {
       setEncryptResult('')
       
       try {
-        const cryptoStartTime = performance.now()
-        const res = encrypt3DES(inputText, key, (step, blockIdx) => {
+        // --- BƯỚC 1: ĐO LƯỜNG THUẦN TÚY (Benchmark) ---
+        // Chạy thuật toán không có callback để lấy thời gian xử lý thực tế
+        const benchStartTime = performance.now()
+        const res = encrypt3DES(inputText, key)
+        const benchEndTime = performance.now()
+        
+        setEncryptResult(res)
+        setEncryptTime(Number((benchEndTime - benchStartTime).toFixed(3)))
+        
+        // --- BƯỚC 2: THU THẬP DỮ LIỆU LOG (Visualization) ---
+        // Chạy lại để lấy các bước trung gian phục vụ hiển thị Timeline
+        encrypt3DES(inputText, key, (step, blockIdx) => {
           const currentTotal = (step.type.includes('3DES') || step.type === 'IP' || step.type === 'FP' || step.type === 'RES')
             ? [...cumulativeBits, ...(step.result || step.bits || step.L || step.R || [])]
             : cumulativeBits;
           allSteps.push({ ...step, blockIdx, cumulativeBitsAtStep: currentTotal })
           if (step.type === 'KẾT THÚC 3DES') cumulativeBits = [...cumulativeBits, ...step.result]
         })
-        const cryptoEndTime = performance.now()
-        setEncryptResult(res)
-        setEncryptTime(Number((cryptoEndTime - cryptoStartTime).toFixed(3))) // Real execution time
         
+        // Hiển thị dần dần để tránh treo UI
         const chunkSize = 24
         for (let i = 0; i < allSteps.length; i += chunkSize) {
           const chunk = allSteps.slice(i, i + chunkSize)
@@ -189,17 +197,22 @@ function App() {
       setDecryptResult('')
 
       try {
-        const cryptoStartTime = performance.now()
-        const res = decrypt3DES(hexInput, key, (step, blockIdx) => {
+        // --- BƯỚC 1: ĐO LƯỜNG THUẦN TÚY (Benchmark) ---
+        const benchStartTime = performance.now()
+        const res = decrypt3DES(hexInput, key)
+        const benchEndTime = performance.now()
+        
+        setDecryptResult(res)
+        setDecryptTime(Number((benchEndTime - benchStartTime).toFixed(3)))
+
+        // --- BƯỚC 2: THU THẬP DỮ LIỆU LOG (Visualization) ---
+        decrypt3DES(hexInput, key, (step, blockIdx) => {
           const currentTotal = (step.type.includes('3DES') || step.type === 'IP' || step.type === 'FP' || step.result)
             ? [...cumulativeBits, ...(step.result || step.bits || step.L || step.R || [])]
             : cumulativeBits;
           allSteps.push({ ...step, blockIdx, cumulativeBitsAtStep: currentTotal })
           if (step.type === 'KẾT THÚC 3DES') cumulativeBits = [...cumulativeBits, ...step.result]
         })
-        const cryptoEndTime = performance.now()
-        setDecryptResult(res)
-        setDecryptTime(Number((cryptoEndTime - cryptoStartTime).toFixed(3)))
         
         const chunkSize = 24
         for (let i = 0; i < allSteps.length; i += chunkSize) {
@@ -217,20 +230,31 @@ function App() {
     setAesResult('')
     setAesTime(0)
     setTimeout(() => {
-      const startTime = performance.now()
       try {
         const parsedKey = CryptoJS.enc.Hex.parse(key);
-        const encrypted = CryptoJS.TripleDES.encrypt(inputText, parsedKey, {
+        
+        // 1. Chạy 3DES Library để kiểm chứng (không đo vào AES time)
+        const encrypted3DES = CryptoJS.TripleDES.encrypt(inputText, parsedKey, {
           mode: CryptoJS.mode.ECB,
           padding: CryptoJS.pad.Pkcs7
         });
-        const libHex = encrypted.ciphertext.toString(CryptoJS.enc.Hex);
-        const ciphertext = CryptoJS.AES.encrypt(inputText, key).toString()
+        console.log("3DES Library Matching Hex:", encrypted3DES.ciphertext.toString(CryptoJS.enc.Hex));
+
+        // 2. Đo lường AES (Benchmark chính)
+        // Lưu ý: Sử dụng cùng một parsedKey để đảm bảo tính công bằng
+        const startTime = performance.now()
+        const aesEncrypted = CryptoJS.AES.encrypt(inputText, parsedKey, {
+          mode: CryptoJS.mode.ECB,
+          padding: CryptoJS.pad.Pkcs7
+        });
         const endTime = performance.now()
-        setAesResult(ciphertext)
+        
+        setAesResult(aesEncrypted.toString())
         setAesTime(endTime - startTime)
-        console.log("3DES Library Matching Hex:", libHex)
-      } catch (e) { alert("Lỗi AES!"); }
+      } catch (e) { 
+        console.error(e);
+        alert("Lỗi AES!"); 
+      }
       finally { setIsAesEncrypting(false); }
     }, 0)
   }
